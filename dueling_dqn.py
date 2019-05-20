@@ -1,6 +1,6 @@
 from mxnet import nd, init
 from mxnet.gluon import nn
-from config import *
+# from config import *
 import math
 import mxnet as mx
 
@@ -16,7 +16,7 @@ class DuelingDQN(nn.Sequential):
                 nn.Flatten()
             )
             self.fully_connected = nn.Dense(512, activation='relu')
-            self.advantage = nn.Dense(ACTION_NUM)
+            self.advantage = nn.Dense(8)
             self.value = nn.Dense(1)
 
 
@@ -43,7 +43,7 @@ class OriginDQN(nn.Sequential):
             )
 
             self.fully_connected = nn.Dense(512, activation='relu')
-            self.value = nn.Dense(ACTION_NUM)
+            self.value = nn.Dense(8)
 
 
     def forward(self, x):

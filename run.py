@@ -10,168 +10,9 @@ import time as tm
 import ABR
 import os
 from eutils import *
-# os.path.join("")
-from replay_buffer import ReplayBuffer
-from config import *
 BIT_RATE = [500.0, 850.0, 1200.0, 1850.0]  # kpbs  码率可选择的范围，每一个码率对应的视频的信息数据对视不一样的
 TARGET_BUFFER = [0.5, 1.0]  # seconds，目标可选择的buffer的大小
 
-# MULTI_STEP = 3
-# MODEL_PATH = "./model"
-# UPDATE_TARGET_BY_EPISODE_END = 50
-# UPDATE_TARGET_BY_EPISODE_START = 5
-# UPDATE_TARGET_DECAY = 200
-# UPDATE_TARGET_BY_EPISODE_RATE = (UPDATE_TARGET_BY_EPISODE_END - UPDATE_TARGET_BY_EPISODE_START) / UPDATE_TARGET_DECAY + 0.00001
-# TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-class Experiment(object):
-    def __init__(self,testing=False):
-        mkdir_if_not_exist(MODEL_PATH)
-        DEBUG = False
-        random_seed = 2
-        # Control the subdirectory where log files will be stored.
-        LOG_FILE_PATH = './log/'
-        # create result directory
-        if not os.path.exists(LOG_FILE_PATH):
-            os.makedirs(LOG_FILE_PATH)
-        NETWORK_TRACE = 'fixed'
-        VIDEO_TRACE = 'AsianCup_China_Uzbekistan'
-        network_trace_dir = './dataset/network_trace/' + NETWORK_TRACE + '/'
-        video_trace_prefix = './dataset/video_trace/' + VIDEO_TRACE + '/frame_trace_'
-        all_cooked_time, all_cooked_bw, all_file_names = load_trace.load_trace(network_trace_dir)
-        self.net_env = fixed_env.Environment(all_cooked_time=all_cooked_time,
-                                        all_cooked_bw=all_cooked_bw,
-                                        random_seed=random_seed,
-                                        logfile_path=LOG_FILE_PATH,
-                                        VIDEO_SIZE_FILE=video_trace_prefix,
-                                        Debug=DEBUG)  # 视频相关的环境初始化，把load的所有的网络的数据输进去
-        self.replay_buffer = ReplayBuffer(buffer_size=BUFFER_MAX,past_frame_len=FRAME_SKIP,multi_step=N_STEP)
-        self.abr = ABR.Algorithm(self.net_env,self.replay_buffer)  # 加载ABR算法
-        self.step_count = 0
-        self.episode_count = 0
-        self.target_net_update_count = 0
-        self.testing = testing
-        self.update_target_episode = UPDATE_TARGET_BY_EPISODE_START
-        self.update_target_interval = UPDATE_TARGET_BY_EPISODE_START + UPDATE_TARGET_RATE
-        # if testing:
-        #     self.start_train()
-        # else:
-        #     self.start_train()
-
-        # self.abr.Initial()
-
-    def _run_epoch(self,i):
-        # 每一次epoch里面设置固定的step步数
-        # 每一个epoch里面可能包含多个episode,一个episode里面可能有多个step，计算step的总和和episode综合，如果超过了设定值计算
-        step_left = EPOCH_LENGTH
-        random_episode = True
-        episode_in_epoch = 0
-        step_in_epoch = 0
-        reward_in_epoch = 0
-        while step_left > 0:
-            if self.step_count > BEGIN_RANDOM_STEP or self.testing:
-                random_episode = False
-            t0 = tm.time()
-            episode_steps, episode_reward, average_loss, average_max_q = self.abr.run_episode(i,random_episode,self.testing)
-            self.step_count += episode_steps
-            if not random_episode:
-                self.episode_count += 1
-                episode_in_epoch += 1
-                step_in_epoch += episode_steps
-                reward_in_epoch += episode_reward
-                step_left -= episode_steps
-            t1 = tm.time()
-            print("episode %d, episode step=%d,total_step=%d,time=%.2f,episode_reward=%.2f,average_loss=%.4f,average_q=%f"
-                  % (self.episode_count, episode_steps,self.step_count,(t1 - t0),episode_reward,average_loss,average_max_q))
-            self._update_target_net(random_episode)
-        self._save_net()
-        print("\n %s EPOCH FINISH %d,episode=%d,step=%d,average_step=%d,average_reward=%.2f \n\n" %
-              (tm.strftime(TIME_FORMAT),
-               i,
-               self.episode_count,
-               self.step_count,
-               step_in_epoch // episode_in_epoch,
-               reward_in_epoch / episode_in_epoch))
-        return
-
-    def _update_target_net(self,random_action=False):
-        print(random_action)
-        if not self.testing and self.episode_count == self.update_target_episode and not random_action:
-            self.target_net_update_count += 1
-            print("%s UPDATE TARGET NET,interval %.3f,update count %d\n" % (tm.strftime(TIME_FORMAT),self.update_target_interval,self.update_target_interval))
-            self.update_target_episode = int(self.update_target_episode + self.update_target_interval)
-            self.update_target_interval = min((self.update_target_interval + UPDATE_TARGET_RATE),UPDATE_TARGET_BY_EPISODE_END)
-            self.abr.update_target_net()
-        return
-
-    def _save_net(self):
-        if not self.testing:
-            self.abr.save_params_to_file(model_path=MODEL_PATH,mark=tm.time())
-            # self.abr.sa
-
-
-    def run(self):
-        for i in range(1, EPOCH_NUM):
-            self._run_epoch(i)
-
-
-
-
-# def train():
-#
-#     random_seed = 2
-#     count = 0
-#     trace_count = 1  # 正在计算的第几个视频
-#     FPS = 25
-#     frame_time_len = 0.04  # 帧速率
-#     reward_all_sum = 0  # 总奖励
-#     run_time = 0  # 运行时间
-#
-#
-#     cnt = 0
-#     # defalut setting
-#     last_bit_rate = 0 # 上一帧的码率
-#     bit_rate = 0
-#     target_buffer = 0 # 目标buffer
-#     latency_limit = 4  # 延迟限制
-#
-#     # QOE setting
-#     """
-#     比特率/帧速率−1.85∗拒绝−W1∗延迟−0.02∗交换机∗abs(比特率−最后一个比特率)−0.5∗跳过时间
-#     """
-#     reward_frame = 0
-#     reward_all = 0
-#     SMOOTH_PENALTY= 0.02  # 平滑惩罚系数
-#     REBUF_PENALTY = 1.85  # 重新加载缓冲区的惩罚系数 拒绝
-#     LANTENCY_PENALTY = 0.005
-#     SKIP_PENALTY = 0.5  # 跳帧惩罚系数
-#     # past_info setting
-#     past_frame_num  = 7500  # 已经过去的帧信息
-#     call_time_sum = 0
-#     random_step = 10000
-#     while True:
-#         # random_cnt = 0
-#         time, time_interval, send_data_size, chunk_len, \
-#         rebuf, buffer_size, play_time_len, end_delay, \
-#         cdn_newest_id, download_id, cdn_has_frame, skip_frame_time_len, decision_flag, \
-#         buffer_flag, cdn_flag, skip_flag, end_of_video = net_env.get_video_frame(bit_rate, target_buffer, latency_limit)
-#         replay_buffer.insert_sample(time_interval, send_data_size, chunk_len, rebuf, buffer_size, play_time_len,
-#                                     end_delay, cdn_newest_id, download_id, cdn_has_frame, skip_frame_time_len,
-#                                     decision_flag, buffer_flag, cdn_flag, skip_flag, end_of_video)
-#         # if random_cnt < random_step:
-#
-#         # else:
-#
-#             # break
-#         # random_cnt += 1
-#
-#         break
-#
-#
-#
-#
-#
-#
-#     return
 
 def test(user_id):
 
@@ -232,8 +73,8 @@ def test(user_id):
                                   logfile_path=LOG_FILE_PATH,
                                   VIDEO_SIZE_FILE=video_trace_prefix,
                                   Debug = DEBUG)  # 视频相关的环境初始化，把load的所有的网络的数据输进去
-    ctx = try_gpu(0)
-    input_sample = nd.ones((1,11),ctx,dtype=np.float32)
+    # ctx = try_gpu(0)
+    # input_sample = nd.ones((1,11),ctx,dtype=np.float32)
     abr = ABR.Algorithm() # 加载ABR算法
     abr_init = abr.Initial()
 
@@ -417,9 +258,9 @@ def test(user_id):
 
     return [reward_all_sum / trace_count, run_time / trace_count]  # 平均奖励，平均运行时间
  
-# a = test("aaa")
-# print(a)
+a = test("aaa")
+print(a)
 
-if __name__ == '__main__':
-    runner = Experiment(False)
-    runner.run()
+# if __name__ == '__main__':
+#     runner = Experiment(False)
+#     runner.run()

@@ -27,8 +27,11 @@ def load_conf(conf_file):
 
     # config.read(default_conf_file)
     config.read(conf_file)
+    config.sections()
     return config['DQN']
 
+# sys.argv[1] = ".\configurations\dqn_conf_1001.ini"
+# print(sys.argv[1])
 
 customer_conf_file = sys.argv[1]
 
@@ -98,11 +101,11 @@ NEGATIVE_REWARD = dqn_conf.getfloat('NEGATIVE_REWARD')
 MODEL_FILE_MARK = dqn_conf.get('MODEL_FILE_MARK')
 BEGIN_TIME = time.strftime("%Y%m%d_%H%M%S")
 # if TEST:
-#     MODEL_PATH = "/home/benyafang/workspace/server/medusa/model/filter_model_channel_" + dqn_conf.get('CHANNEL')
+#     MODEL_PATH = "/home/benyafang/workspace/server/medusa/results/filter_model_channel_" + dqn_conf.get('CHANNEL')
 # else:
-#     MODEL_PATH = "/home/benyafang/workspace/server/medusa/model/" + MODEL_FILE_MARK
-# MODEL_PATH = "/home/benyafang/workspace/server/medusa/model/" + MODEL_FILE_MARK
-MODEL_PATH = "./model"
+#     MODEL_PATH = "/home/benyafang/workspace/server/medusa/results/" + MODEL_FILE_MARK
+# MODEL_PATH = "/home/benyafang/workspace/server/medusa/results/" + MODEL_FILE_MARK
+MODEL_PATH = dqn_conf.get('MODEL_PATH')
 #
 EDITED_TIME = dqn_conf.get("EDITED_TIME")
 

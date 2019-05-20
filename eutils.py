@@ -141,7 +141,7 @@ def _get_batch(batch, ctx):
 
 
 def evaluate_accuracy(data_iter, net, ctx=[mx.cpu()]):
-    """Evaluate accuracy of a model on the given data set."""
+    """Evaluate accuracy of a results on the given data set."""
     if isinstance(ctx, mx.Context):
         ctx = [ctx]
     acc = nd.array([0])
@@ -160,7 +160,7 @@ def evaluate_accuracy(data_iter, net, ctx=[mx.cpu()]):
 
 def train_cpu(net, train_iter, test_iter, loss, num_epochs, batch_size,
               params=None, lr=None, trainer=None):
-    """Train and evaluate a model on CPU."""
+    """Train and evaluate a results on CPU."""
     for epoch in range(1, num_epochs + 1):
         train_l_sum = 0
         train_acc_sum = 0
@@ -182,7 +182,7 @@ def train_cpu(net, train_iter, test_iter, loss, num_epochs, batch_size,
 
 
 def train(train_iter, test_iter, net, loss, trainer, ctx, num_epochs, print_batches=None):
-    """Train and evaluate a model."""
+    """Train and evaluate a results."""
     print("training on ", ctx)
     if isinstance(ctx, mx.Context):
         ctx = [ctx]
@@ -350,7 +350,7 @@ def train_and_predict_rnn(rnn, is_random_iter, epochs, num_steps, hidden_dim,
                           pred_period, pred_len, seqs, get_params, get_inputs,
                           ctx, corpus_indices, idx_to_char, char_to_idx,
                           is_lstm=False):
-    """Train an RNN model and predict the next item in the sequence."""
+    """Train an RNN results and predict the next item in the sequence."""
     if is_random_iter:
         data_iter = data_iter_random
     else:
